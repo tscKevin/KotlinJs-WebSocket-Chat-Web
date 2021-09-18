@@ -9,7 +9,7 @@ class WebSocketTest {
     val path = "chat"
 
     @Test
-    fun WebSocketTest() {
+    fun webSocketTest() {
         Promise<Unit> { resolve, reject ->
             val webSocket = WebSocket("ws://127.0.0.1:$post/$path")
             assertEquals(WebSocket.OPEN, webSocket.readyState)

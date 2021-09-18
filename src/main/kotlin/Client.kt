@@ -14,35 +14,43 @@ fun main() {
     val connectButton = document.getElementById("connectButton") as HTMLButtonElement
     val msgInput = document.getElementById("message") as HTMLInputElement
     val sendButton = document.getElementById("sendButton") as HTMLButtonElement
-    val chatList = document.getElementById("chatTableBody") as HTMLTableSectionElement
+    val chatView = document.getElementById("chatTableBody") as HTMLTableSectionElement
     val onlineUserList = document.getElementById("onlineList") as HTMLLabelElement
 
-    val webSocket = CreateWebSocket(chatList, userNameInput, connectButton, onlineUserList)
-
+    val webSocket = MyWebSocket(chatView, userNameInput, connectButton, onlineUserList)
     connectButton.addEventListener("click", {
-        when (webSocket.getState()) {
-            OPEN -> webSocket.disconnect()
+        when (webSocket.connectState) {
+            OPEN -> webSocket.close()
             CLOSED -> {
                 if (userNameInput.value != "") {
-                    webSocket.connect("ws://127.0.0.1:8088/chat", userNameInput.value)
+                    webSocket.connect("ws://127.0.0.1:8088/chats", userNameInput.value)
                 } else {
-                    alert("Please enter your name")
+                    alert("Please enter user name")
                     userNameInput.focus()
                 }
             }
         }
     })
+
     sendButton.addEventListener("click", {
-        if (msgInput.value != "") when (webSocket.getState()) {
+        when (webSocket.connectState) {
             OPEN -> {
-                webSocket.sendMsg(msgInput.value)
-                msgInput.value = ""
+                if (msgInput.value != "") {
+                    webSocket.send(msgInput.value)
+                    msgInput.value = ""
+                }
                 msgInput.focus()
             }
             CLOSED -> {
-                alert("Please connect websocket")
+                alert("Please enter user name")
                 userNameInput.focus()
             }
         }
     })
+
+    document.onkeydown = {
+        if (it.keyCode == 13) {
+            sendButton.click()
+        }
+    }
 }
