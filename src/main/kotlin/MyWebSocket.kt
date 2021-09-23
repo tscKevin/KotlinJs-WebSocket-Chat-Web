@@ -18,12 +18,14 @@ class MyWebSocket(
     var connectState = CLOSED
 
     companion object {
-        data class JsonPacket(val serverCmd: ServerCmd? = null, val chatMessage: ChatMessage? = null)
-        data class ServerCmd(val cmdFun: Int? = null, val cmd: Array<String>? = null, val userList: ArrayList<String>? = null)
+        //data class JsonPacket(val serverCmd: ServerCmd? = null, val chatMessage: ChatMessage? = null)
+        data class ServerCmd(val cmdCode: CmdCode, val chatMessage: ChatMessage?, val userList: ArrayList<String>?)
         data class ChatMessage(val userName: String? = null, val msg: String? = null)
 
         //cmdFun keyCode
-        val UPDATE_ONLINE_USER_LIST: Int = 1
+        enum class CmdCode {
+            CMD_UPDATE_USERS, CMD_CHAT, CND_CLOSE
+        }
     }
 
     fun connect(url: String, userName: String) {
@@ -51,29 +53,30 @@ class MyWebSocket(
     }
 
     private fun messageEventFun(it: MessageEvent) {
-        val receive = JSON.parse<JsonPacket>("${it.data}")
-        if (receive.serverCmd != null) {
-            when(receive.serverCmd!!.cmdFun){
-                UPDATE_ONLINE_USER_LIST->{
-                    var nameItem = ""
-                    (receive.serverCmd!!.userList as Array<String>).forEach { nameItem += "$it, " }
-                    onlineUserList.innerHTML = nameItem.dropLast(2)
+        val receive = JSON.parse<ServerCmd>("${it.data}")
+        when (receive.cmdCode.toString()){
+            CmdCode.CMD_UPDATE_USERS.toString()->{
+                var nameItem = (receive.userList as Array<String>).joinToString()
+                println(nameItem)
+                onlineUserList.innerHTML = nameItem
+            }
+            CmdCode.CMD_CHAT.toString() -> {
+                println(receive.chatMessage!!.userName)
+                println(receive.chatMessage.msg)
+                chatView.append {
+                    tr {
+                        td {
+                            +"${receive.chatMessage.userName}"
+                        }
+                        td {
+                            colSpan = "4"
+                            +"${receive.chatMessage.msg}"
+                        }
+                    }
                 }
             }
-        }
-        if (receive.chatMessage != null) {
-            println(receive.chatMessage!!.userName)
-            println(receive.chatMessage!!.msg)
-            chatView.append {
-                tr {
-                    td {
-                        +"${receive.chatMessage!!.userName}"
-                    }
-                    td {
-                        colSpan = "4"
-                        +"${receive.chatMessage!!.msg}"
-                    }
-                }
+            CmdCode.CND_CLOSE.toString() -> {
+                println("Close")
             }
         }
     }
@@ -92,8 +95,8 @@ class MyWebSocket(
     }
 
     fun send(msg: String) {
-        println("Send ${JSON.stringify(JsonPacket(chatMessage = ChatMessage(userName, msg)))}")
-        webSocket!!.send(JSON.stringify(JsonPacket(chatMessage = ChatMessage(userName, msg))))
+        println("Send ${JSON.stringify(ServerCmd(CmdCode.CMD_CHAT,ChatMessage(userName, msg),null))}")
+        webSocket!!.send(JSON.stringify(ServerCmd(CmdCode.CMD_CHAT,ChatMessage(userName, msg),null)))
     }
 
     fun close() {
